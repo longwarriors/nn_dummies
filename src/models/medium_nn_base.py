@@ -1,5 +1,7 @@
 # https://towardsdatascience.com/math-neural-network-from-scratch-in-python-d6da9f29ce65
 import numpy as np
+
+
 class Layer:
     def __init__(self):
         self.input = None
@@ -12,6 +14,7 @@ class Layer:
     def backward_propagation(self, output_error, learning_rate):
         """compute the dE/dX for the given dE/dY and update the weights if any"""
         raise NotImplementedError
+
 
 class FullyConnectedLayer(Layer):
     # input_size = number of input neurons
@@ -26,9 +29,24 @@ class FullyConnectedLayer(Layer):
         return self.output
 
     def backward_propagation(self, output_error, learning_rate):
-        """Compute dE/dW, dE/dB for the given output_error. Returns input_error.
+        """Compute dE/dW, dE/dB for the given output_error.
+        Returns input_error.
         input_error=dE/dX
         output_error=dE/dY
         """
-        input_error = output_error.dot(self.weights.T)
-        weights_error = input_error * self.weights
+        input_error = output_error.dot(self.weights.T)  # de_dX = de_dY @ W.T
+        weights_error = self.input.T.dot(output_error)  # de_dW = X.T @ de_dY
+        bias_error = output_error  # de_dB = de_dY
+
+        # update parameters
+        self.weights -= learning_rate * weights_error
+        self.bias -= learning_rate * bias_error
+        return input_error  # de_dX
+
+
+class ActivationLayer(Layer):
+    def __init__(self, activation, activation_derivative):
+        self.activation = activation
+        self.activation_prime = activation_derivative
+
+    def forward_propagation(self, input):
