@@ -50,3 +50,37 @@ class ActivationLayer(Layer):
         self.activation_prime = activation_derivative
 
     def forward_propagation(self, input):
+        # Return the activated input
+        self.input = input
+        self.output = self.activation(self.input)
+        return self.output
+
+    def backward_propagation(self, output_error, learning_rate):
+        # Return input_error=de_dX for the given output_error de_dY.
+        # no learnable parameters
+        return self.activation_prime(self.input) * output_error
+
+
+class Tanh:
+    def __call__(self, X):
+        return np.tanh(X)
+
+    def derivative(self, X):
+        return 1 - self(X) ** 2
+
+
+class MSELoss:
+    def __call__(self, y_true, y_hat):
+        return np.mean((y_true - y_hat) ** 2)
+
+    def derivative(self, y_true, y_hat):
+        return 2 * (y_true - y_hat) / y_true.size
+
+class MultiLayerPerceptron:
+    def __init__(self):
+        self.layers = []
+        self.loss = None
+        self.loss_derivative = None
+
+    def add_layer(self, layer):
+        self.layers.append(layer)
