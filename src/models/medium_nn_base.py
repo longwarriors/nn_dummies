@@ -76,6 +76,7 @@ class MSELoss:
     def derivative(self, y_true, y_hat):
         return 2 * (y_true - y_hat) / y_true.size
 
+
 class MultiLayerPerceptron:
     def __init__(self):
         self.layers = []
@@ -84,3 +85,46 @@ class MultiLayerPerceptron:
 
     def add_layer(self, layer):
         self.layers.append(layer)
+
+    def set_loss(self, loss, loss_derivative):
+        self.loss = loss
+        self.loss_derivative = loss_derivative
+
+    def predict(self, input):
+        batch_size = input.size(0)  # batch first
+        result = []
+        for i in range(batch_size):
+            output = []
+            for layer in self.layers:
+                output = layer.forward_propagation(input[i])
+            result.append(output)
+        return result
+
+    def fit(self, X_train, y_train, learning_rate, epochs):
+        batch_size = X_train.shape[0]
+        for epoch in range(epochs):
+            err = 0
+            for i in range(batch_size):
+                output = []
+                for layer in self.layers:
+                    output = layer.forward_propagation(X_train[i])
+                err += self.loss(y_train[i], output)
+                error = self.loss_derivative(y_train[i], output)
+                for layer in reversed(self.layers):
+                    error = layer.backward_propagation(error, learning_rate)
+            err /= batch_size
+            print(f'Epoch {epoch+1}/{epochs}: Error: {err}')
+
+
+if __name__ == '__main__':
+    # training data
+    x_train = np.array([[[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]]])
+    y_train = np.array([[[0]], [[1]], [[1]], [[0]]])
+
+    # network
+    net = MultiLayerPerceptron()
+    net.add_layer(FullyConnectedLayer(2, 3))
+    net.add_layer(ActivationLayer(tanh, tanh_prime))
+    net.add_layer(FullyConnectedLayer(3, 1))
+    net.add_layer(ActivationLayer(tanh, tanh_prime))
+
