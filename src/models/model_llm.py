@@ -43,8 +43,9 @@ class Attention(nn.Module):
         k = self.Wk(x)
         v = self.Wv(x)
         output = q.mm(k.transpose(-2, -1)) / math.sqrt(head_dim)
-        output.masked_fill_(self.mask[:T, :T] == 0, float('-inf')) # 等于0的部分设为负无穷大
-        return output
+        output.masked_fill_(self.mask[:T, :T] == 0, float('-inf'))  # 等于0的部分设为负无穷大
+        output = output.softmax(dim=-1)
+        return output @ v
 
 
 if __name__ == '__main__':
