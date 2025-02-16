@@ -89,9 +89,12 @@ class Model(nn.Module):  # Transformer
 
     def forward(self, x_batch, y_batch=None):  # x.shape = (batch_size, timestep_context_length, head_dim)
         B, T, D = x_batch.shape
-        pe_lookup_table = torch.zeros(context_length, d_model, device=device) # (context_length, d_model)
+        pe_lookup_table = torch.zeros(context_length, d_model, device=device)  # (context_length, d_model)
         position = torch.arange(context_length, device=device, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(self.te_lookup_table(position))
+        div_term = torch.exp(-math.log(10000.0) * torch.arange(0, d_model, 2, device=device).float() / d_model)
+        pe_lookup_table[:, 0::2] = torch.sin(div_term * position)
+        pe_lookup_table[:, 1::2] = torch.cos(div_term * position)
+
 
 if __name__ == '__main__':
     m2 = torch.rand(3, 7)
