@@ -11,6 +11,7 @@ d_model = 512  # embedding_dim
 context_length = 16  # tokens
 num_heads = 8
 head_dim = d_model // num_heads
+num_blocks = 12
 dropout = 0.1
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -45,14 +46,57 @@ class Attention(nn.Module):
         output = q.mm(k.transpose(-2, -1)) / math.sqrt(head_dim)
         output.masked_fill_(self.mask[:T, :T] == 0, float('-inf'))  # 等于0的部分设为负无穷大
         output = output.softmax(dim=-1)
-        return output @ v
+        scores = output @ v
+        return scores
 
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.heads = nn.ModuleList([Attention() for _ in range(num_heads)])
+        self.Wo = nn.Linear(d_model, d_model)
+        self.Dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        output = torch.cat([head(x) for head in self.heads])
+        output = self.Wo(output)
+        output = self.Dropout(output)
+        return output
+
+
+class TransformerBlock(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(d_model)
+        self.ln2 = nn.LayerNorm(d_model)
+        self.mha = MultiHeadAttention()
+        self.ffn = FeedForwardNet()
+
+    def forward(self, x):
+        x = x + self.mha(self.ln1(x))
+        x = x + self.ffn(self.ln2(x))
+        return x
+
+
+class Model(nn.Module):  # Transformer
+    def __init__(self, max_token_value=100256):  # tiktoken default value 100256
+        super().__init__()
+        self.vocab_linear = nn.Linear(d_model, max_token_value)
+        self.te_lookup_table = nn.Embedding(max_token_value, d_model)  # token embedding
+        self.transformer_block = nn.Sequential(
+            *([TransformerBlock() for _ in range(num_blocks)] + [nn.LayerNorm(d_model)])
+        )
+
+    def forward(self, x_batch, y_batch=None):  # x.shape = (batch_size, timestep_context_length, head_dim)
+        B, T, D = x_batch.shape
+        pe_lookup_table = torch.zeros(context_length, d_model, device=device) # (context_length, d_model)
+        position = torch.arange(context_length, device=device, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(self.te_lookup_table(position))
 
 if __name__ == '__main__':
-    d = 5
-    below_triangle = torch.ones(d, d).tril_()
-    print(below_triangle)
-    new = torch.tril(torch.ones(d, d))
-    print(new)
-    nnew = torch.triu(torch.ones(d, d))
-    print(nnew)
+    m2 = torch.rand(3, 7)
+    print(m2)
+    r1 = m2.softmax(dim=-1)
+    r2 = F.softmax(m2)
+    print(r1)
+    print(r2)
